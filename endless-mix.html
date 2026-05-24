@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1-Click Endless Mix Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+        }
+
+        .glow-button {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+        }
+
+        .glow-button:hover {
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.8), 0 0 50px rgba(245, 158, 11, 0.4);
+            transform: scale(1.05);
+        }
+
+        .glow-button:active {
+            transform: scale(0.98);
+        }
+
+        .pulse {
+            animation: pulse-glow 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), 0 0 60px rgba(245, 158, 11, 0.5); }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #f59e0b;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .track-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .track-card:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(245, 158, 11, 0.6);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+        }
+
+        .track-card.now-playing {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+            height: 4px;
+            border-radius: 2px;
+            margin-top: 8px;
+        }
+
+        .info-badge {
+            display: inline-block;
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            color: #f59e0b;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-right: 4px;
+        }
+
+        .waveform-container {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 16px 0;
+        }
+
+        #waveform {
+            filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-extrabold mb-2 bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+                🎛️ Endless Mix
+            </h1>
+            <p class="text-gray-400 text-lg">One Click. Non-Stop Music. Forever.</p>
+        </div>
+
+        <!-- Main Control -->
+        <div class="text-center mb-12">
+            <button id="generateBtn" class="glow-button px-12 py-4 rounded-full text-xl pulse">
+                🎵 GENERATE ENDLESS MIX
+            </button>
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-amber-500/20 mb-8">
+            <h3 class="text-xl font-bold mb-4 text-amber-400">⚙️ Mix Settings</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Genre Selection -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-gray-300">Genre:</label>
+                    <select id="genreSelect" class="w-full bg-white/10 border border-amber-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500">
+                        <option value="hip-hop">Hip-Hop / Rap</option>
+                        <option value="electronic">Electronic / Techno</option>
+                        <option value="house">House / Dance</option>
+                        <option value="trap">Trap / Future Bass</option>
+                        <option value="lofi">Lo-Fi / Chill</option>
+                        <option value="mixed">Mixed</option>
+                    </select>
+                </div>
+
+                <!-- BPM Control -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-gray-300">Target BPM:</label>
+                    <div class="flex items-center gap-4">
+                        <input type="range" id="bpmSlider" min="80" max="160" value="120" class="flex-1 h-2 bg-amber-600/30 rounded-lg appearance-none cursor-pointer" style="accent-color: #f59e0b;">
+                        <span id="bpmValue" class="text-amber-400 font-bold text-lg min-w-12">120</span>
+                    </div>
+                </div>
+
+                <!-- Energy Level -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-gray-300">Energy Level:</label>
+                    <div class="flex gap-2">
+                        <button onclick="setEnergy('low')" class="flex-1 py-2 px-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 hover:bg-amber-500/10 transition">Low</button>
+                        <button onclick="setEnergy('medium')" class="flex-1 py-2 px-3 rounded-lg bg-amber-500/20 border border-amber-500 transition">Med</button>
+                        <button onclick="setEnergy('high')" class="flex-1 py-2 px-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 hover:bg-amber-500/10 transition">High</button>
+                    </div>
+                </div>
+
+                <!-- Mix Duration -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-gray-300">Mix Length:</label>
+                    <select id="durationSelect" class="w-full bg-white/10 border border-amber-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500">
+                        <option value="30">30 minutes</option>
+                        <option value="60">60 minutes</option>
+                        <option value="120">2 hours</option>
+                        <option value="999">Infinite Loop</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Section -->
+        <div class="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-amber-500/20 mb-8">
+            <h3 class="text-xl font-bold mb-4 text-amber-400">🎧 Now Playing</h3>
+            
+            <!-- Waveform -->
+            <div class="waveform-container">
+                <div id="waveform"></div>
+            </div>
+
+            <!-- Current Track Info -->
+            <div class="bg-black/30 rounded-lg p-4 mb-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p id="currentTrackName" class="text-lg font-bold text-amber-400">Waiting for mix...</p>
+                        <p id="currentTrackArtist" class="text-sm text-gray-400">Click generate to start</p>
+                    </div>
+                    <div id="trackStats" class="text-right">
+                        <span class="info-badge">BPM: <span id="trackBPM">--</span></span>
+                        <span class="info-badge">KEY: <span id="trackKey">--</span></span>
+                    </div>
+                </div>
+                <div class="progress-bar" id="trackProgress" style="width: 0%"></div>
+                <div class="flex justify-between text-xs text-gray-500 mt-2">
+                    <span id="currentTime">0:00</span>
+                    <span id="totalTime">0:00</span>
+                </div>
+            </div>
+
+            <!-- Playback Controls -->
+            <div class="flex gap-3 justify-center mb-4">
+                <button id="playBtn" class="glow-button px-6 py-2 rounded-lg">▶️ Play</button>
+                <button id="pauseBtn" class="px-6 py-2 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 transition">⏸️ Pause</button>
+                <button id="stopBtn" class="px-6 py-2 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 transition">⏹️ Stop</button>
+            </div>
+
+            <!-- Volume Control -->
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-400">🔊</span>
+                <input type="range" id="volumeSlider" min="0" max="100" value="70" class="flex-1 h-2 bg-amber-600/30 rounded-lg appearance-none cursor-pointer" style="accent-color: #f59e0b;">
+                <span id="volumeValue" class="text-amber-400 font-bold text-sm min-w-10">70%</span>
+            </div>
+        </div>
+
+        <!-- Queue Section -->
+        <div class="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-amber-500/20">
+            <h3 class="text-xl font-bold mb-4 text-amber-400">📋 Mix Queue (<span id="queueCount">0</span> tracks)</h3>
+            
+            <div id="queueList" class="max-h-96 overflow-y-auto">
+                <p class="text-gray-500 text-center py-8">Queue will appear here after generating mix</p>
+            </div>
+        </div>
+
+        <!-- Status Info -->
+        <div id="statusMessage" class="mt-8 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-center hidden">
+            <span class="loading-spinner"></span> <span id="statusText">Generating mix...</span>
+        </div>
+    </div>
+
+    <!-- Demo Mode Script -->
+    <script>
+        const generateBtn = document.getElementById('generateBtn');
+        const queueList = document.getElementById('queueList');
+        const queueCount = document.getElementById('queueCount');
+        const statusMessage = document.getElementById('statusMessage');
+        const statusText = document.getElementById('statusText');
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmValue = document.getElementById('bpmValue');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeValue = document.getElementById('volumeValue');
+
+        // Mock Data
+        const mockTracks = {
+            'hip-hop': [
+                { name: 'Trap Beat Flow', artist: 'AI DJ', bpm: 94, key: 'G Minor', duration: 240 },
+                { name: 'East Coast Vibes', artist: 'AI DJ', bpm: 92, key: 'D Minor', duration: 240 },
+                { name: 'Boom Bap Classic', artist: 'AI DJ', bpm: 90, key: 'A Minor', duration: 240 },
+                { name: 'Lo-Fi Cypher', artist: 'AI DJ', bpm: 88, key: 'E Minor', duration: 240 },
+                { name: 'Dirty South Heat', artist: 'AI DJ', bpm: 96, key: 'F# Minor', duration: 240 },
+            ],
+            'electronic': [
+                { name: 'Techno Pulse', artist: 'AI DJ', bpm: 128, key: 'C Minor', duration: 240 },
+                { name: 'Deep House Groove', artist: 'AI DJ', bpm: 120, key: 'G Major', duration: 240 },
+                { name: 'Acid Synth Wave', artist: 'AI DJ', bpm: 130, key: 'D Minor', duration: 240 },
+                { name: 'Ambient Drift', artist: 'AI DJ', bpm: 110, key: 'A Major', duration: 240 },
+            ],
+            'house': [
+                { name: 'Four on the Floor', artist: 'AI DJ', bpm: 128, key: 'G Minor', duration: 240 },
+                { name: 'Chicago Legacy', artist: 'AI DJ', bpm: 126, key: 'D Major', duration: 240 },
+                { name: 'Vocal House Magic', artist: 'AI DJ', bpm: 124, key: 'A Minor', duration: 240 },
+            ],
+            'trap': [
+                { name: 'Future Bass Drop', artist: 'AI DJ', bpm: 140, key: 'F# Minor', duration: 240 },
+                { name: 'Trap Lord Anthem', artist: 'AI DJ', bpm: 150, key: 'D Minor', duration: 240 },
+                { name: 'Snare Roll Madness', artist: 'AI DJ', bpm: 145, key: 'G Minor', duration: 240 },
+            ],
+            'lofi': [
+                { name: 'Study Vibes', artist: 'AI DJ', bpm: 85, key: 'C Minor', duration: 240 },
+                { name: 'Late Night Feels', artist: 'AI DJ', bpm: 80, key: 'G Major', duration: 240 },
+                { name: 'Rainy Afternoon', artist: 'AI DJ', bpm: 82, key: 'D Minor', duration: 240 },
+            ]
+        };
+
+        let currentMixQueue = [];
+        let currentTrackIndex = 0;
+        let isPlaying = false;
+        let playbackTime = 0;
+
+        // BPM Slider
+        bpmSlider.addEventListener('input', (e) => {
+            bpmValue.textContent = e.target.value;
+        });
+
+        // Volume Slider
+        volumeSlider.addEventListener('input', (e) => {
+            volumeValue.textContent = e.target.value + '%';
+        });
+
+        // Energy Level
+        window.setEnergy = (level) => {
+            document.querySelectorAll('[onclick*="setEnergy"]').forEach(btn => {
+                btn.classList.remove('bg-amber-500/20', 'border-amber-500');
+                btn.classList.add('bg-white/10', 'border-white/20');
+            });
+            event.target.classList.add('bg-amber-500/20', 'border-amber-500');
+        };
+
+        // Generate Mix
+        generateBtn.addEventListener('click', async () => {
+            showStatus('Analyzing your preferences...');
+            
+            const genre = document.getElementById('genreSelect').value;
+            const targetBPM = bpmSlider.value;
+            const duration = document.getElementById('durationSelect').value;
+
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            showStatus('Creating seamless transitions...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            showStatus('Mixing audio stems...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Generate mix
+            generateMix(genre);
+            statusMessage.classList.add('hidden');
+
+            // Auto play
+            setTimeout(() => {
+                document.getElementById('playBtn').click();
+            }, 500);
+        });
+
+        function generateMix(genre) {
+            const trackPool = mockTracks[genre] || mockTracks['mixed'];
+            const duration = parseInt(document.getElementById('durationSelect').value);
+            
+            currentMixQueue = [];
+            const trackCount = Math.ceil((duration * 60) / 240); // Rough calculation
+
+            // Create mix by cycling through tracks
+            for (let i = 0; i < trackCount; i++) {
+                const track = trackPool[i % trackPool.length];
+                currentMixQueue.push({
+                    ...track,
+                    id: i,
+                    transition: i > 0 ? ['Crossfade', 'EQ Sweep', 'Echo Out', 'Cut'][Math.floor(Math.random() * 4)] : 'Intro'
+                });
+            }
+
+            updateQueueDisplay();
+            updateCurrentTrack();
+        }
+
+        function updateQueueDisplay() {
+            queueCount.textContent = currentMixQueue.length;
+            queueList.innerHTML = currentMixQueue.map((track, idx) => `
+                <div class="track-card ${idx === currentTrackIndex ? 'now-playing' : ''}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-semibold text-white">${idx + 1}. ${track.name}</p>
+                            <p class="text-sm text-gray-400">${track.artist} • ${track.transition}</p>
+                        </div>
+                        <div class="text-right text-xs text-gray-500">
+                            <p class="info-badge">${track.bpm} BPM</p>
+                            <p class="info-badge">${track.key}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Auto-scroll to current track
+            const currentCard = queueList.querySelector('.now-playing');
+            if (currentCard) {
+                currentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateCurrentTrack() {
+            if (currentMixQueue.length === 0) return;
+            
+            const track = currentMixQueue[currentTrackIndex];
+            document.getElementById('currentTrackName').textContent = track.name;
+            document.getElementById('currentTrackArtist').textContent = `${track.artist} • ${track.transition}`;
+            document.getElementById('trackBPM').textContent = track.bpm;
+            document.getElementById('trackKey').textContent = track.key;
+            document.getElementById('totalTime').textContent = formatTime(track.duration);
+            
+            updateQueueDisplay();
+        }
+
+        // Playback Controls
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (currentMixQueue.length === 0) {
+                alert('Generate a mix first!');
+                return;
+            }
+            isPlaying = true;
+            simulatePlayback();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isPlaying = false;
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            isPlaying = false;
+            currentTrackIndex = 0;
+            playbackTime = 0;
+            document.getElementById('trackProgress').style.width = '0%';
+            document.getElementById('currentTime').textContent = '0:00';
+            updateCurrentTrack();
+        });
+
+        function simulatePlayback() {
+            if (!isPlaying) return;
+
+            const track = currentMixQueue[currentTrackIndex];
+            playbackTime += 0.1;
+
+            const progress = (playbackTime / track.duration) * 100;
+            document.getElementById('trackProgress').style.width = progress + '%';
+            document.getElementById('currentTime').textContent = formatTime(playbackTime);
+
+            if (playbackTime >= track.duration) {
+                currentTrackIndex++;
+                if (currentTrackIndex >= currentMixQueue.length) {
+                    currentTrackIndex = 0; // Loop
+                }
+                playbackTime = 0;
+                updateCurrentTrack();
+            }
+
+            if (isPlaying) {
+                requestAnimationFrame(simulatePlayback);
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function showStatus(message) {
+            statusText.textContent = message;
+            statusMessage.classList.remove('hidden');
+        }
+
+        // Initialize
+        document.getElementById('genreSelect').addEventListener('change', (e) => {
+            currentMixQueue = [];
+            queueList.innerHTML = '<p class="text-gray-500 text-center py-8">Queue will appear here after generating mix</p>';
+        });
+    </script>
+</body>
+</html>
