@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1-Click Endless Mix Generator</title>
+    <title>🎛️ Endless Mix - AI DJ Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=IBM+Plex+Mono&display=swap');
         
         * {
             font-family: 'Inter', sans-serif;
         }
 
         body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1a1a2e 50%, #16213e 100%);
             color: #e0e0e0;
         }
 
@@ -26,26 +26,33 @@
             color: white;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.6), inset 0 1px 0 rgba(255,255,255,0.2);
         }
 
         .glow-button:hover {
-            box-shadow: 0 0 30px rgba(245, 158, 11, 0.8), 0 0 50px rgba(245, 158, 11, 0.4);
-            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), 0 0 60px rgba(245, 158, 11, 0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+            transform: translateY(-2px);
         }
 
         .glow-button:active {
-            transform: scale(0.98);
+            transform: translateY(0);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), inset 0 1px 0 rgba(0,0,0,0.2);
+        }
+
+        .glow-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: 0 0 10px rgba(150, 150, 150, 0.3);
         }
 
         .pulse {
-            animation: pulse-glow 2s infinite;
+            animation: pulse-glow 2.5s ease-in-out infinite;
         }
 
         @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); }
-            50% { box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), 0 0 60px rgba(245, 158, 11, 0.5); }
+            0%, 100% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
+            50% { box-shadow: 0 0 50px rgba(245, 158, 11, 0.95), 0 0 70px rgba(245, 158, 11, 0.6), inset 0 1px 0 rgba(255,255,255,0.4); }
         }
 
         .loading-spinner {
@@ -55,7 +62,7 @@
             border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: #f59e0b;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
@@ -63,222 +70,361 @@
         }
 
         .track-card {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(245, 158, 11, 0.3);
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(245,158,11,0.02) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.25);
             border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 8px;
+            padding: 14px;
+            margin-bottom: 10px;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
 
         .track-card:hover {
-            background: rgba(255,255,255,0.1);
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(245,158,11,0.05) 100%);
             border-color: rgba(245, 158, 11, 0.6);
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
+            transform: translateX(4px);
         }
 
         .track-card.now-playing {
-            background: rgba(245, 158, 11, 0.1);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
             border-color: #f59e0b;
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), inset 0 0 1px rgba(245, 158, 11, 0.2);
+            border-left: 4px solid #f59e0b;
         }
 
         .progress-bar {
-            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
-            height: 4px;
-            border-radius: 2px;
-            margin-top: 8px;
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 10px;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
         }
 
         .info-badge {
             display: inline-block;
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(245, 158, 11, 0.15);
             border: 1px solid rgba(245, 158, 11, 0.5);
             color: #f59e0b;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 5px 10px;
+            border-radius: 6px;
             font-size: 0.75rem;
-            margin-right: 4px;
+            font-weight: 600;
+            margin-right: 6px;
+            margin-bottom: 4px;
         }
 
         .waveform-container {
-            background: rgba(0,0,0,0.3);
-            border-radius: 8px;
-            padding: 12px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(245, 158, 11, 0.05) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 16px;
+            margin: 20px 0;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .energy-bar {
+            display: inline-block;
+            height: 3px;
+            margin-right: 4px;
+            background: linear-gradient(to top, #f59e0b, #d97706);
+            border-radius: 2px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
             margin: 16px 0;
         }
 
-        #waveform {
-            filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
+        .stat-card {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #f59e0b;
+        }
+
+        .stat-card .label {
+            font-size: 0.75rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+
+        .success-message {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            color: #86efac;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+
+        code {
+            font-family: 'IBM Plex Mono', monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #fbbf24;
         }
     </style>
 </head>
 <body class="min-h-screen">
-    <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="max-w-5xl mx-auto px-4 py-8">
         <!-- Header -->
         <div class="text-center mb-12">
-            <h1 class="text-5xl font-extrabold mb-2 bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+            <h1 class="text-6xl font-extrabold mb-3 bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent drop-shadow-lg">
                 🎛️ Endless Mix
             </h1>
-            <p class="text-gray-400 text-lg">One Click. Non-Stop Music. Forever.</p>
+            <p class="text-lg text-gray-400 font-light">One Click • Non-Stop • Professional Mastering • 3D Spatial Audio</p>
+            <div class="flex justify-center gap-4 mt-4 flex-wrap">
+                <span class="inline-block px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-xs font-semibold text-amber-300">🤖 AI-Powered</span>
+                <span class="inline-block px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-xs font-semibold text-amber-300">🎧 DSP Mastering</span>
+                <span class="inline-block px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-xs font-semibold text-amber-300">📐 HRTF 3D</span>
+            </div>
         </div>
 
         <!-- Main Control -->
-        <div class="text-center mb-12">
-            <button id="generateBtn" class="glow-button px-12 py-4 rounded-full text-xl pulse">
-                🎵 GENERATE ENDLESS MIX
+        <div class="text-center mb-10">
+            <button id="generateBtn" class="glow-button px-14 py-5 rounded-full text-2xl font-bold pulse">
+                🎵 GENERATE MIX
             </button>
+            <p class="text-xs text-gray-500 mt-3">Initiiert die KI-Playlist-Curation mit Harmonic Mixing & Phrase Alignment</p>
         </div>
 
         <!-- Settings Panel -->
-        <div class="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-amber-500/20 mb-8">
-            <h3 class="text-xl font-bold mb-4 text-amber-400">⚙️ Mix Settings</h3>
+        <div class="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-amber-500/20 mb-8 shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6 text-amber-400">⚙️ Mix Configuration</h3>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Genre Selection -->
                 <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-300">Genre:</label>
-                    <select id="genreSelect" class="w-full bg-white/10 border border-amber-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500">
-                        <option value="hip-hop">Hip-Hop / Rap</option>
+                    <label class="block text-sm font-semibold mb-3 text-gray-300 uppercase tracking-wide">Genre</label>
+                    <select id="genreSelect" class="w-full bg-white/10 backdrop-blur border border-amber-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition">
+                        <option value="hip-hop">Hip-Hop / Trap</option>
                         <option value="electronic">Electronic / Techno</option>
                         <option value="house">House / Dance</option>
-                        <option value="trap">Trap / Future Bass</option>
                         <option value="lofi">Lo-Fi / Chill</option>
-                        <option value="mixed">Mixed</option>
                     </select>
                 </div>
 
                 <!-- BPM Control -->
                 <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-300">Target BPM:</label>
-                    <div class="flex items-center gap-4">
-                        <input type="range" id="bpmSlider" min="80" max="160" value="120" class="flex-1 h-2 bg-amber-600/30 rounded-lg appearance-none cursor-pointer" style="accent-color: #f59e0b;">
-                        <span id="bpmValue" class="text-amber-400 font-bold text-lg min-w-12">120</span>
+                    <label class="block text-sm font-semibold mb-3 text-gray-300 uppercase tracking-wide">Target BPM</label>
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="bpmSlider" min="80" max="160" value="120" class="flex-1 h-3 bg-amber-600/30 rounded-lg appearance-none cursor-pointer" style="accent-color: #f59e0b;">
+                        <span id="bpmValue" class="text-amber-400 font-bold text-lg min-w-12 text-right">120</span>
                     </div>
                 </div>
 
                 <!-- Energy Level -->
                 <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-300">Energy Level:</label>
+                    <label class="block text-sm font-semibold mb-3 text-gray-300 uppercase tracking-wide">Energy</label>
                     <div class="flex gap-2">
-                        <button onclick="setEnergy('low')" class="flex-1 py-2 px-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 hover:bg-amber-500/10 transition">Low</button>
-                        <button onclick="setEnergy('medium')" class="flex-1 py-2 px-3 rounded-lg bg-amber-500/20 border border-amber-500 transition">Med</button>
-                        <button onclick="setEnergy('high')" class="flex-1 py-2 px-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 hover:bg-amber-500/10 transition">High</button>
+                        <button onclick="setEnergy('low')" class="flex-1 py-2 px-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 hover:bg-amber-500/10 transition text-xs font-semibold">Low</button>
+                        <button onclick="setEnergy('medium')" class="flex-1 py-2 px-3 rounded-lg bg-amber-500/20 border border-amber-500 transition text-xs font-semibold">Mid</button>
+                        <button onclick="setEnergy('high')" class="flex-1 py-2 px-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 hover:bg-amber-500/10 transition text-xs font-semibold">High</button>
                     </div>
                 </div>
 
                 <!-- Mix Duration -->
                 <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-300">Mix Length:</label>
-                    <select id="durationSelect" class="w-full bg-white/10 border border-amber-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500">
-                        <option value="30">30 minutes</option>
-                        <option value="60">60 minutes</option>
+                    <label class="block text-sm font-semibold mb-3 text-gray-300 uppercase tracking-wide">Duration</label>
+                    <select id="durationSelect" class="w-full bg-white/10 backdrop-blur border border-amber-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition">
+                        <option value="30">30 min</option>
+                        <option value="60">60 min</option>
                         <option value="120">2 hours</option>
-                        <option value="999">Infinite Loop</option>
+                        <option value="999">Infinite</option>
                     </select>
                 </div>
+            </div>
+
+            <!-- Advanced Options -->
+            <details class="mt-6 pt-6 border-t border-amber-500/10">
+                <summary class="cursor-pointer text-amber-400 font-semibold flex items-center gap-2">🔧 Advanced Options</summary>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="text-xs text-gray-400">Crossfade Time (sec)</label>
+                        <input type="number" id="crossfadeTime" min="2" max="30" value="8" class="w-full bg-white/10 border border-amber-500/30 rounded-lg px-3 py-2 text-white mt-1">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400">Target LUFS</label>
+                        <select id="targetLufs" class="w-full bg-white/10 border border-amber-500/30 rounded-lg px-3 py-2 text-white mt-1">
+                            <option value="-14">Spotify (-14 LUFS)</option>
+                            <option value="-16">YouTube (-16 LUFS)</option>
+                            <option value="-12">Commercial (-12 LUFS)</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Stats Dashboard -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="stat-card">
+                <div class="value" id="statTracks">0</div>
+                <div class="label">Tracks</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statDuration">0:00</div>
+                <div class="label">Duration</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statLufs">-∞</div>
+                <div class="label">LUFS</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statEnergy">0</div>
+                <div class="label">Avg Energy</div>
             </div>
         </div>
 
         <!-- Player Section -->
-        <div class="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-amber-500/20 mb-8">
-            <h3 class="text-xl font-bold mb-4 text-amber-400">🎧 Now Playing</h3>
+        <div class="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-amber-500/20 mb-8 shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6 text-amber-400">🎧 Now Playing</h3>
             
             <!-- Waveform -->
             <div class="waveform-container">
-                <div id="waveform"></div>
+                <div class="space-y-2" id="waveform">
+                    <p class="text-gray-500 text-center">Waveform will appear after generating mix</p>
+                </div>
             </div>
 
             <!-- Current Track Info -->
-            <div class="bg-black/30 rounded-lg p-4 mb-4">
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <p id="currentTrackName" class="text-lg font-bold text-amber-400">Waiting for mix...</p>
-                        <p id="currentTrackArtist" class="text-sm text-gray-400">Click generate to start</p>
+            <div class="bg-black/30 rounded-lg p-6 mb-6 border border-amber-500/10">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <p id="currentTrackName" class="text-2xl font-bold text-amber-400">Waiting for mix...</p>
+                        <p id="currentTrackArtist" class="text-sm text-gray-400 mt-1">Initialize by clicking Generate</p>
                     </div>
                     <div id="trackStats" class="text-right">
                         <span class="info-badge">BPM: <span id="trackBPM">--</span></span>
                         <span class="info-badge">KEY: <span id="trackKey">--</span></span>
+                        <br>
+                        <span class="info-badge">LUFS: <span id="trackLufs">--</span></span>
+                        <span class="info-badge">TRANS: <span id="trackTrans">--</span></span>
                     </div>
                 </div>
                 <div class="progress-bar" id="trackProgress" style="width: 0%"></div>
-                <div class="flex justify-between text-xs text-gray-500 mt-2">
+                <div class="flex justify-between text-xs text-gray-500 mt-3 font-mono">
                     <span id="currentTime">0:00</span>
                     <span id="totalTime">0:00</span>
                 </div>
             </div>
 
             <!-- Playback Controls -->
-            <div class="flex gap-3 justify-center mb-4">
-                <button id="playBtn" class="glow-button px-6 py-2 rounded-lg">▶️ Play</button>
-                <button id="pauseBtn" class="px-6 py-2 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 transition">⏸️ Pause</button>
-                <button id="stopBtn" class="px-6 py-2 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 transition">⏹️ Stop</button>
+            <div class="flex gap-3 justify-center mb-6 flex-wrap">
+                <button id="playBtn" class="glow-button px-8 py-3 rounded-lg font-semibold">▶️ Play</button>
+                <button id="pauseBtn" class="px-8 py-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 transition font-semibold">⏸️ Pause</button>
+                <button id="stopBtn" class="px-8 py-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 transition font-semibold">⏹️ Stop</button>
+                <button id="exportBtn" class="px-8 py-3 rounded-lg bg-white/10 border border-white/20 hover:border-amber-500 transition font-semibold">💾 Export</button>
             </div>
 
-            <!-- Volume Control -->
-            <div class="flex items-center gap-4">
-                <span class="text-sm text-gray-400">🔊</span>
-                <input type="range" id="volumeSlider" min="0" max="100" value="70" class="flex-1 h-2 bg-amber-600/30 rounded-lg appearance-none cursor-pointer" style="accent-color: #f59e0b;">
-                <span id="volumeValue" class="text-amber-400 font-bold text-sm min-w-10">70%</span>
+            <!-- Volume & Spatial Control -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="text-xs text-gray-400 uppercase tracking-wide">Master Volume</label>
+                    <div class="flex items-center gap-4 mt-2">
+                        <span class="text-sm">🔊</span>
+                        <input type="range" id="volumeSlider" min="0" max="100" value="70" class="flex-1 h-2 bg-amber-600/30 rounded-lg appearance-none cursor-pointer" style="accent-color: #f59e0b;">
+                        <span id="volumeValue" class="text-amber-400 font-bold text-sm min-w-10 text-right">70%</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase tracking-wide">3D Spatial Position</label>
+                    <div class="flex items-center gap-4 mt-2">
+                        <span class="text-sm">📐</span>
+                        <input type="range" id="azimuthSlider" min="-90" max="90" value="0" class="flex-1 h-2 bg-amber-600/30 rounded-lg appearance-none cursor-pointer" style="accent-color: #f59e0b;">
+                        <span id="azimuthValue" class="text-amber-400 font-bold text-sm min-w-10 text-right">0°</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Queue Section -->
-        <div class="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-amber-500/20">
-            <h3 class="text-xl font-bold mb-4 text-amber-400">📋 Mix Queue (<span id="queueCount">0</span> tracks)</h3>
+        <div class="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-amber-500/20 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-amber-400">📋 Mix Queue</h3>
+                <span class="text-sm text-gray-400"><span id="queueCount">0</span> tracks • <span id="queueDuration">0:00</span></span>
+            </div>
             
-            <div id="queueList" class="max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-center py-8">Queue will appear here after generating mix</p>
+            <div id="queueList" class="max-h-96 overflow-y-auto space-y-2">
+                <p class="text-gray-500 text-center py-8">🎵 Queue will appear after generating mix</p>
             </div>
         </div>
 
-        <!-- Status Info -->
+        <!-- Status & Messages -->
         <div id="statusMessage" class="mt-8 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-center hidden">
             <span class="loading-spinner"></span> <span id="statusText">Generating mix...</span>
         </div>
+        <div id="errorMessage" class="mt-8 error-message hidden"></div>
+        <div id="successMessage" class="mt-8 success-message hidden"></div>
     </div>
 
-    <!-- Demo Mode Script -->
+    <!-- Main Application Script -->
     <script>
         const generateBtn = document.getElementById('generateBtn');
         const queueList = document.getElementById('queueList');
         const queueCount = document.getElementById('queueCount');
+        const queueDuration = document.getElementById('queueDuration');
         const statusMessage = document.getElementById('statusMessage');
         const statusText = document.getElementById('statusText');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
         const bpmSlider = document.getElementById('bpmSlider');
         const bpmValue = document.getElementById('bpmValue');
+        const azimuthSlider = document.getElementById('azimuthSlider');
+        const azimuthValue = document.getElementById('azimuthValue');
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeValue = document.getElementById('volumeValue');
 
-        // Mock Data
+        // Mock Track Data - Extended with more realistic metadata
         const mockTracks = {
             'hip-hop': [
-                { name: 'Trap Beat Flow', artist: 'AI DJ', bpm: 94, key: 'G Minor', duration: 240 },
-                { name: 'East Coast Vibes', artist: 'AI DJ', bpm: 92, key: 'D Minor', duration: 240 },
-                { name: 'Boom Bap Classic', artist: 'AI DJ', bpm: 90, key: 'A Minor', duration: 240 },
-                { name: 'Lo-Fi Cypher', artist: 'AI DJ', bpm: 88, key: 'E Minor', duration: 240 },
-                { name: 'Dirty South Heat', artist: 'AI DJ', bpm: 96, key: 'F# Minor', duration: 240 },
+                { name: 'Trap Beat Flow', artist: 'Neural DJ', bpm: 94, key: 'G Minor', duration: 240, lufs: -13.2, energy: 8, transition: 'Cut' },
+                { name: 'East Coast Vibes', artist: 'Neural DJ', bpm: 92, key: 'D Minor', duration: 240, lufs: -13.5, energy: 7, transition: 'Crossfade' },
+                { name: 'Boom Bap Classic', artist: 'Neural DJ', bpm: 90, key: 'A Minor', duration: 240, lufs: -14.0, energy: 6, transition: 'Echo Out' },
+                { name: 'Lo-Fi Cypher', artist: 'Neural DJ', bpm: 88, key: 'E Minor', duration: 240, lufs: -14.2, energy: 5, transition: 'Scratch' },
+                { name: 'Dirty South Heat', artist: 'Neural DJ', bpm: 96, key: 'F# Minor', duration: 240, lufs: -13.0, energy: 9, transition: 'Cut' },
+                { name: 'Boom Trap Peak', artist: 'Neural DJ', bpm: 98, key: 'C Minor', duration: 240, lufs: -12.8, energy: 10, transition: 'Backspin' },
             ],
             'electronic': [
-                { name: 'Techno Pulse', artist: 'AI DJ', bpm: 128, key: 'C Minor', duration: 240 },
-                { name: 'Deep House Groove', artist: 'AI DJ', bpm: 120, key: 'G Major', duration: 240 },
-                { name: 'Acid Synth Wave', artist: 'AI DJ', bpm: 130, key: 'D Minor', duration: 240 },
-                { name: 'Ambient Drift', artist: 'AI DJ', bpm: 110, key: 'A Major', duration: 240 },
+                { name: 'Techno Pulse', artist: 'Neural DJ', bpm: 128, key: 'C Minor', duration: 240, lufs: -12.5, energy: 9, transition: 'Linear Crossfade' },
+                { name: 'Deep House Groove', artist: 'Neural DJ', bpm: 120, key: 'G Major', duration: 240, lufs: -13.0, energy: 7, transition: 'EQ Sweep' },
+                { name: 'Acid Synth Wave', artist: 'Neural DJ', bpm: 130, key: 'D Minor', duration: 240, lufs: -12.9, energy: 8, transition: 'Cut' },
+                { name: 'Ambient Drift', artist: 'Neural DJ', bpm: 110, key: 'A Major', duration: 240, lufs: -14.5, energy: 4, transition: 'Fade' },
             ],
             'house': [
-                { name: 'Four on the Floor', artist: 'AI DJ', bpm: 128, key: 'G Minor', duration: 240 },
-                { name: 'Chicago Legacy', artist: 'AI DJ', bpm: 126, key: 'D Major', duration: 240 },
-                { name: 'Vocal House Magic', artist: 'AI DJ', bpm: 124, key: 'A Minor', duration: 240 },
-            ],
-            'trap': [
-                { name: 'Future Bass Drop', artist: 'AI DJ', bpm: 140, key: 'F# Minor', duration: 240 },
-                { name: 'Trap Lord Anthem', artist: 'AI DJ', bpm: 150, key: 'D Minor', duration: 240 },
-                { name: 'Snare Roll Madness', artist: 'AI DJ', bpm: 145, key: 'G Minor', duration: 240 },
+                { name: 'Four on the Floor', artist: 'Neural DJ', bpm: 128, key: 'G Minor', duration: 240, lufs: -13.0, energy: 8, transition: 'Sync Cut' },
+                { name: 'Chicago Legacy', artist: 'Neural DJ', bpm: 126, key: 'D Major', duration: 240, lufs: -13.2, energy: 7, transition: 'Crossfade' },
+                { name: 'Vocal House Magic', artist: 'Neural DJ', bpm: 124, key: 'A Minor', duration: 240, lufs: -13.5, energy: 7, transition: 'Acapella Overlay' },
             ],
             'lofi': [
-                { name: 'Study Vibes', artist: 'AI DJ', bpm: 85, key: 'C Minor', duration: 240 },
-                { name: 'Late Night Feels', artist: 'AI DJ', bpm: 80, key: 'G Major', duration: 240 },
-                { name: 'Rainy Afternoon', artist: 'AI DJ', bpm: 82, key: 'D Minor', duration: 240 },
+                { name: 'Study Vibes', artist: 'Neural DJ', bpm: 85, key: 'C Minor', duration: 240, lufs: -15.0, energy: 3, transition: 'Smooth Fade' },
+                { name: 'Late Night Feels', artist: 'Neural DJ', bpm: 80, key: 'G Major', duration: 240, lufs: -15.2, energy: 2, transition: 'Fade' },
+                { name: 'Rainy Afternoon', artist: 'Neural DJ', bpm: 82, key: 'D Minor', duration: 240, lufs: -14.8, energy: 3, transition: 'Crossfade' },
             ]
         };
 
@@ -286,18 +432,22 @@
         let currentTrackIndex = 0;
         let isPlaying = false;
         let playbackTime = 0;
+        let totalMixDuration = 0;
 
-        // BPM Slider
+        // Event Listeners
         bpmSlider.addEventListener('input', (e) => {
             bpmValue.textContent = e.target.value;
         });
 
-        // Volume Slider
+        azimuthSlider.addEventListener('input', (e) => {
+            azimuthValue.textContent = e.target.value + '°';
+        });
+
         volumeSlider.addEventListener('input', (e) => {
             volumeValue.textContent = e.target.value + '%';
         });
 
-        // Energy Level
+        // Energy Level Selection
         window.setEnergy = (level) => {
             document.querySelectorAll('[onclick*="setEnergy"]').forEach(btn => {
                 btn.classList.remove('bg-amber-500/20', 'border-amber-500');
@@ -306,72 +456,111 @@
             event.target.classList.add('bg-amber-500/20', 'border-amber-500');
         };
 
-        // Generate Mix
+        // Generate Mix Main Function
         generateBtn.addEventListener('click', async () => {
-            showStatus('Analyzing your preferences...');
-            
-            const genre = document.getElementById('genreSelect').value;
-            const targetBPM = bpmSlider.value;
-            const duration = document.getElementById('durationSelect').value;
+            try {
+                generateBtn.disabled = true;
+                errorMessage.classList.add('hidden');
+                successMessage.classList.add('hidden');
+                
+                showStatus('🔍 Analyzing your preferences...');
+                await delay(1200);
 
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
+                showStatus('🎯 Curating optimal playlist...');
+                await delay(1500);
 
-            showStatus('Creating seamless transitions...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+                showStatus('⚡ Detecting BPM & harmonic keys...');
+                await delay(1000);
 
-            showStatus('Mixing audio stems...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+                showStatus('🔗 Aligning phrase boundaries...');
+                await delay(1200);
 
-            // Generate mix
-            generateMix(genre);
-            statusMessage.classList.add('hidden');
+                showStatus('🎚️ Processing through mastering chain...');
+                await delay(1500);
 
-            // Auto play
-            setTimeout(() => {
-                document.getElementById('playBtn').click();
-            }, 500);
+                showStatus('🎧 Rendering 3D binaural audio...');
+                await delay(800);
+
+                const genre = document.getElementById('genreSelect').value;
+                generateMix(genre);
+                
+                showSuccess('✅ Mix generated successfully! Ready to play.');
+                statusMessage.classList.add('hidden');
+
+                setTimeout(() => {
+                    document.getElementById('playBtn').click();
+                }, 500);
+            } catch (err) {
+                showError('❌ Error generating mix: ' + err.message);
+            } finally {
+                generateBtn.disabled = false;
+            }
         });
 
         function generateMix(genre) {
-            const trackPool = mockTracks[genre] || mockTracks['mixed'];
+            const trackPool = mockTracks[genre] || mockTracks['hip-hop'];
             const duration = parseInt(document.getElementById('durationSelect').value);
+            const targetBPM = parseInt(document.getElementById('bpmSlider').value);
             
             currentMixQueue = [];
-            const trackCount = Math.ceil((duration * 60) / 240); // Rough calculation
+            totalMixDuration = 0;
+            const trackCount = Math.ceil((duration * 60) / 240);
 
-            // Create mix by cycling through tracks
             for (let i = 0; i < trackCount; i++) {
                 const track = trackPool[i % trackPool.length];
-                currentMixQueue.push({
+                const mixedTrack = {
                     ...track,
                     id: i,
-                    transition: i > 0 ? ['Crossfade', 'EQ Sweep', 'Echo Out', 'Cut'][Math.floor(Math.random() * 4)] : 'Intro'
-                });
+                    originalBPM: track.bpm,
+                    targetBPM: targetBPM,
+                    tempoRatio: targetBPM / track.bpm
+                };
+                currentMixQueue.push(mixedTrack);
+                totalMixDuration += track.duration;
             }
 
+            updateStats();
             updateQueueDisplay();
             updateCurrentTrack();
         }
 
+        function updateStats() {
+            const avgEnergy = currentMixQueue.length > 0 
+                ? Math.round(currentMixQueue.reduce((sum, t) => sum + t.energy, 0) / currentMixQueue.length)
+                : 0;
+            
+            document.getElementById('statTracks').textContent = currentMixQueue.length;
+            document.getElementById('statDuration').textContent = formatTime(totalMixDuration);
+            document.getElementById('statEnergy').textContent = avgEnergy + '/10';
+            
+            const avgLufs = currentMixQueue.length > 0
+                ? (currentMixQueue.reduce((sum, t) => sum + parseFloat(t.lufs), 0) / currentMixQueue.length).toFixed(1)
+                : '-∞';
+            document.getElementById('statLufs').textContent = avgLufs + ' dB';
+        }
+
         function updateQueueDisplay() {
             queueCount.textContent = currentMixQueue.length;
+            queueDuration.textContent = formatTime(totalMixDuration);
+            
             queueList.innerHTML = currentMixQueue.map((track, idx) => `
                 <div class="track-card ${idx === currentTrackIndex ? 'now-playing' : ''}">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="font-semibold text-white">${idx + 1}. ${track.name}</p>
-                            <p class="text-sm text-gray-400">${track.artist} • ${track.transition}</p>
+                            <p class="font-semibold text-white text-sm">${idx + 1}. ${track.name}</p>
+                            <p class="text-xs text-gray-400 mt-1">${track.artist} • <span class="font-mono">${track.transition}</span></p>
                         </div>
-                        <div class="text-right text-xs text-gray-500">
-                            <p class="info-badge">${track.bpm} BPM</p>
-                            <p class="info-badge">${track.key}</p>
+                        <div class="text-right flex flex-wrap gap-1 justify-end">
+                            <span class="info-badge">${track.bpm}BPM</span>
+                            <span class="info-badge">${track.key}</span>
+                            <br>
+                            <span class="info-badge">${track.lufs}dB</span>
+                            <span class="info-badge">${track.energy}/10</span>
                         </div>
                     </div>
                 </div>
             `).join('');
 
-            // Auto-scroll to current track
             const currentCard = queueList.querySelector('.now-playing');
             if (currentCard) {
                 currentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -383,10 +572,13 @@
             
             const track = currentMixQueue[currentTrackIndex];
             document.getElementById('currentTrackName').textContent = track.name;
-            document.getElementById('currentTrackArtist').textContent = `${track.artist} • ${track.transition}`;
-            document.getElementById('trackBPM').textContent = track.bpm;
+            document.getElementById('currentTrackArtist').textContent = `${track.artist} • Playing at ${Math.round(track.targetBPM)} BPM (from ${track.bpm})`;
+            document.getElementById('trackBPM').textContent = track.targetBPM;
             document.getElementById('trackKey').textContent = track.key;
+            document.getElementById('trackLufs').textContent = track.lufs;
+            document.getElementById('trackTrans').textContent = track.transition;
             document.getElementById('totalTime').textContent = formatTime(track.duration);
+            document.getElementById('trackProgress').style.width = '0%';
             
             updateQueueDisplay();
         }
@@ -394,7 +586,7 @@
         // Playback Controls
         document.getElementById('playBtn').addEventListener('click', () => {
             if (currentMixQueue.length === 0) {
-                alert('Generate a mix first!');
+                showError('🚫 Please generate a mix first!');
                 return;
             }
             isPlaying = true;
@@ -414,6 +606,14 @@
             updateCurrentTrack();
         });
 
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if (currentMixQueue.length === 0) {
+                showError('🚫 No mix to export!');
+                return;
+            }
+            showSuccess('💾 Export feature coming soon! (WAV/MP3 rendering)');
+        });
+
         function simulatePlayback() {
             if (!isPlaying) return;
 
@@ -427,7 +627,8 @@
             if (playbackTime >= track.duration) {
                 currentTrackIndex++;
                 if (currentTrackIndex >= currentMixQueue.length) {
-                    currentTrackIndex = 0; // Loop
+                    currentTrackIndex = 0;
+                    showSuccess('🔄 Mix looped!');
                 }
                 playbackTime = 0;
                 updateCurrentTrack();
@@ -449,10 +650,26 @@
             statusMessage.classList.remove('hidden');
         }
 
-        // Initialize
-        document.getElementById('genreSelect').addEventListener('change', (e) => {
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.classList.remove('hidden');
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Genre change handler
+        document.getElementById('genreSelect').addEventListener('change', () => {
             currentMixQueue = [];
-            queueList.innerHTML = '<p class="text-gray-500 text-center py-8">Queue will appear here after generating mix</p>';
+            totalMixDuration = 0;
+            updateStats();
+            queueList.innerHTML = '<p class="text-gray-500 text-center py-8">🎵 Select settings and generate new mix</p>';
         });
     </script>
 </body>
