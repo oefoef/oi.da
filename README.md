@@ -128,7 +128,7 @@ c = 343 m/s (sound speed at 20°C)
 
 ---
 
-## 🔬 Technical Stack
+## 🛠️ Technical Stack
 
 - **Audio Analysis**: librosa, numpy, scipy
 - **DSP**: scipy.signal (IIR/FIR filters)
