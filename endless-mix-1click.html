@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 1-Click Streaming - Endless Mix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1a1a2e 50%, #16213e 100%); color: #e0e0e0; }
+        .glow-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: white; font-weight: 600; cursor: pointer; padding: 12px 24px; border-radius: 8px; transition: all 0.3s; box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+        .glow-btn:hover { box-shadow: 0 0 40px rgba(245, 158, 11, 0.8); transform: translateY(-2px); }
+        .glow-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: 12px; padding: 20px; margin: 10px 0; }
+        .progress-bar { background: linear-gradient(90deg, #f59e0b, #d97706); height: 8px; border-radius: 4px; width: 0%; transition: width 0.2s; }
+        .stat { font-size: 2rem; font-weight: 800; color: #f59e0b; }
+        .badge { display: inline-block; padding: 4px 12px; background: rgba(245,158,11,0.2); border: 1px solid rgba(245,158,11,0.5); border-radius: 20px; font-size: 0.75rem; color: #f59e0b; margin: 2px; }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-6xl font-extrabold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent mb-3">🎬 1-Click Streaming</h1>
+            <p class="text-gray-400 text-lg">MediaSource API • Infinite Buffering • Seamless Looping</p>
+        </div>
+
+        <!-- Quick Start Buttons -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <button onclick="quickStartSuno()" class="glow-btn w-full" id="sunoBtn">
+                🎵 Suno Playlist
+            </button>
+            <button onclick="quickStartDrive()" class="glow-btn w-full" id="driveBtn">
+                📁 Google Drive
+            </button>
+            <button onclick="quickStartURL()" class="glow-btn w-full" id="urlBtn">
+                🔗 Direct URL
+            </button>
+        </div>
+
+        <!-- Input Section -->
+        <div class="card" id="inputSection" style="display: none;">
+            <h3 class="text-2xl font-bold text-amber-400 mb-4" id="inputTitle">Enter Source</h3>
+            <input type="text" id="sourceInput" placeholder="Paste URL here..." class="w-full bg-white/10 border border-amber-500/30 rounded-lg px-4 py-3 text-white mb-4">
+            <button onclick="startStream()" class="glow-btn w-full">▶️ Start Streaming</button>
+        </div>
+
+        <!-- Real-time Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="statsSection" style="display: none;">
+            <div class="card text-center">
+                <div class="text-sm text-gray-400">Status</div>
+                <div class="stat" id="statusStat">Ready</div>
+            </div>
+            <div class="card text-center">
+                <div class="text-sm text-gray-400">Downloaded</div>
+                <div class="stat" id="downloadStat">0%</div>
+            </div>
+            <div class="card text-center">
+                <div class="text-sm text-gray-400">Speed</div>
+                <div class="stat" id="speedStat">0 MB/s</div>
+            </div>
+            <div class="card text-center">
+                <div class="text-sm text-gray-400">Buffered</div>
+                <div class="stat" id="bufferStat">0s</div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="card" id="progressSection" style="display: none;">
+            <div class="flex justify-between mb-2">
+                <span>Download Progress</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="progress-bar" id="downloadProgress"></div>
+        </div>
+
+        <!-- Now Playing -->
+        <div class="card" id="playingSection" style="display: none;">
+            <h3 class="text-xl font-bold text-amber-400 mb-4">🎧 Now Playing</h3>
+            <p id="trackTitle" class="text-2xl font-bold mb-2">-</p>
+            <p id="trackInfo" class="text-gray-400 mb-4">-</p>
+            <div class="flex gap-3">
+                <button onclick="togglePlayPause()" class="glow-btn flex-1" id="playPauseBtn">⏸️ Pause</button>
+                <button onclick="stopStream()" class="glow-btn flex-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">⏹️ Stop</button>
+            </div>
+        </div>
+
+        <!-- Playlist Queue -->
+        <div class="card" id="queueSection" style="display: none;">
+            <h3 class="text-xl font-bold text-amber-400 mb-4">📋 Queue</h3>
+            <div id="queueList" class="space-y-2 max-h-64 overflow-y-auto">
+                <!-- Tracks will appear here -->
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="successMsg" class="card" style="display: none; background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.5);"></div>
+        <div id="errorMsg" class="card" style="display: none; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.5);"></div>
+    </div>
+
+    <script src="endless-mix-streaming.js"></script>
+    <script>
+        let streamingEngine = null;
+        let sunoPlayer = null;
+        let drivePlayer = null;
+        let currentMode = null;
+        let isPaused = false;
+
+        // Initialize on first interaction
+        document.addEventListener('click', () => {
+            if (!streamingEngine) {
+                streamingEngine = new StreamingAudioEngine(new (window.AudioContext || window.webkitAudioContext)());
+                sunoPlayer = new SunoStreamPlayer(streamingEngine);
+                console.log('✅ Streaming engine initialized');
+            }
+        }, { once: true });
+
+        function showMessage(msg, type = 'success') {
+            const el = type === 'success' ? document.getElementById('successMsg') : document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        async function quickStartSuno() {
+            document.getElementById('inputTitle').textContent = '🎵 Suno Playlist URL';
+            document.getElementById('sourceInput').placeholder = 'https://suno.com/playlist/...';
+            currentMode = 'suno';
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('sourceInput').focus();
+        }
+
+        async function quickStartDrive() {
+            document.getElementById('inputTitle').textContent = '📁 Google Drive Folder ID';
+            document.getElementById('sourceInput').placeholder = 'Folder ID from URL';
+            currentMode = 'drive';
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('sourceInput').focus();
+        }
+
+        async function quickStartURL() {
+            document.getElementById('inputTitle').textContent = '🔗 Direct Audio URL';
+            document.getElementById('sourceInput').placeholder = 'https://example.com/audio.mp3';
+            currentMode = 'url';
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('sourceInput').focus();
+        }
+
+        async function startStream() {
+            if (!streamingEngine) {
+                showMessage('❌ Click page first to initialize', 'error');
+                return;
+            }
+
+            const input = document.getElementById('sourceInput').value;
+            if (!input) {
+                showMessage('❌ Enter a URL or ID', 'error');
+                return;
+            }
+
+            document.getElementById('statsSection').style.display = 'grid';
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('playingSection').style.display = 'block';
+            document.getElementById('inputSection').style.display = 'none';
+
+            try {
+                if (currentMode === 'suno') {
+                    await sunoPlayer.loadAndStreamPlaylist(input);
+                    document.getElementById('trackTitle').textContent = `Loading Suno Playlist (${sunoPlayer.playlist.length} tracks)`;
+                    document.getElementById('trackInfo').textContent = '▶️ Starting playback...';
+                    
+                    // Update queue
+                    const queueHtml = sunoPlayer.playlist.map((t, i) => 
+                        `<div class="text-sm"><span class="badge">${i+1}</span> ${t.title} - ${t.artist}</div>`
+                    ).join('');
+                    document.getElementById('queueList').innerHTML = queueHtml;
+                    document.getElementById('queueSection').style.display = 'block';
+                    
+                    // Start auto-play
+                    await sunoPlayer.autoPlayPlaylist(
+                        (progress) => updateProgress(progress),
+                        (error) => showMessage(`❌ ${error}`, 'error')
+                    );
+                } else if (currentMode === 'url') {
+                    document.getElementById('trackTitle').textContent = '🎵 Streaming Audio';
+                    await streamingEngine.startStreaming(
+                        input,
+                        (progress) => updateProgress(progress),
+                        (error) => showMessage(`❌ ${error}`, 'error')
+                    );
+                }
+            } catch (error) {
+                showMessage(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function updateProgress(progress) {
+            if (!progress) return;
+            
+            document.getElementById('statusStat').textContent = 'Streaming';
+            document.getElementById('downloadStat').textContent = `${progress.percent}%`;
+            document.getElementById('speedStat').textContent = `${progress.speed} MB/s`;
+            document.getElementById('downloadProgress').style.width = `${progress.percent}%`;
+            document.getElementById('progressText').textContent = `${progress.percent}%`;
+            
+            if (progress.track) {
+                document.getElementById('trackTitle').textContent = progress.track;
+                document.getElementById('trackInfo').textContent = `${progress.current}/${progress.total} • ${progress.speed} MB/s`;
+            }
+        }
+
+        function togglePlayPause() {
+            if (!streamingEngine) return;
+            
+            isPaused = !isPaused;
+            const btn = document.getElementById('playPauseBtn');
+            
+            if (isPaused) {
+                streamingEngine.pause();
+                btn.textContent = '▶️ Resume';
+            } else {
+                streamingEngine.resume();
+                btn.textContent = '⏸️ Pause';
+            }
+        }
+
+        function stopStream() {
+            if (!streamingEngine) return;
+            
+            streamingEngine.stop();
+            if (sunoPlayer) sunoPlayer.stop();
+            
+            document.getElementById('statsSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('playingSection').style.display = 'none';
+            document.getElementById('queueSection').style.display = 'none';
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('statusStat').textContent = 'Stopped';
+            
+            showMessage('✅ Streaming stopped', 'success');
+        }
+    </script>
+</body>
+</html>
